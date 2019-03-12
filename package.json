@@ -1,0 +1,27 @@
+{
+  "name": "test-parser",
+  "version": "1.0.0",
+  "description": "test parser",
+  "scripts": {
+    "start": "node app/index.js",
+    "lint": "eslint **/*.js",
+    "test": "nyc --reporter=html --reporter=text mocha test/**/*.js test/*.js"
+  },
+  "devDependencies": {
+    "assert": "^1.4.1",
+    "aws-sdk-mock": "^4.3.1",
+    "eslint": "^5.9.0",
+    "eslint-config-google": "^0.11.0",
+    "istanbul": "^0.4.5",
+    "mocha": "^5.2.0",
+    "nyc": "^13.1.0",
+    "rewire": "^4.0.1",
+    "sinon": "^7.2.7"
+  },
+  "dependencies": {
+    "aws-sdk": "^2.418.0",
+    "moment": "^2.24.0",
+    "restify": "^8.1.0",
+    "xmlbuilder": "^11.0.0"
+  }
+}
