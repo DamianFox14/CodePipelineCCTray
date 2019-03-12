@@ -1,0 +1,25 @@
+{
+  "extends": [
+    "google"
+  ],
+  "env": {
+    "node": true
+  },
+  "rules": {
+    "linebreak-style": "off",
+    "max-len": [
+      "warn",
+      130
+    ],
+    /* This is for cucumber ONLY!*/
+    "new-cap": "off"
+  },
+  "parserOptions": {
+    "ecmaVersion": 8,
+    "sourceType": "module",
+    "ecmaFeatures": {
+      "jsx": true
+    }
+  }
+}
+  
