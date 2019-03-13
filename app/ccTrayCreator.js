@@ -1,5 +1,6 @@
 const builder = require('xmlbuilder');
 const AWS = require('aws-sdk');
+AWS.config.update({region:'eu-west-1'});
 
 /**
  * A restify function that will return the xml file created from the current AWS CodePipeline state.
