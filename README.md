@@ -25,6 +25,7 @@ Check out the code and execute the following commands:
 * npm install
 * npm run start
 (You need to ensure this is ran on restart)
+Also you need to set the AWS_REGION environment variable to the region you are connecting to.
 
 
 Once this is completed on http://localhost:8080/cc.xml a file will be hosted which you can use for nevergreen or other tools.

@@ -10,14 +10,18 @@ const AWS = require('aws-sdk');
  * @return {Promise<void>}
  */
 exports.getCCxml = async function(req, res, next) {
-  const ccFile = {
-    Projects: {
-      Project: await createCCProjectList(),
-    },
-  };
-  const xml = builder.create(ccFile);
-  res.header('Content-Type', 'application/xml');
-  res.send(xml.end());
+  try {
+    const ccFile = {
+      Projects: {
+        Project: await createCCProjectList(),
+      },
+    };
+    const xml = builder.create(ccFile);
+    res.header('Content-Type', 'application/xml');
+    res.send(xml.end());
+  } catch(err) {
+    console.log(err)
+  }
   res.end();
   next();
 };
