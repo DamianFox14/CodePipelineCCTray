@@ -85,6 +85,6 @@ async function createCCProjectList() {
       projectList.push(createProject(stages[j].latestExecution.status, name + '-' + stages[j].stageName,
           execData.pipelineExecutionSummaries[0].lastUpdateTime));
     }
-    return projectList;
   }
+  return projectList;
 }
