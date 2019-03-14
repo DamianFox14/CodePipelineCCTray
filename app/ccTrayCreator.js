@@ -2,6 +2,37 @@ const builder = require('xmlbuilder');
 const AWS = require('aws-sdk');
 AWS.config.update({region:'eu-west-1'});
 
+let projectList = [];
+setProjectList();
+
+async function setProjectList(){
+  let newProjectList = [];
+  const codepipeline = new AWS.CodePipeline();
+
+  const pipelineList = await codepipeline.listPipelines({}).promise();
+  for (let i = 0; i < pipelineList.pipelines.length; i++) {
+    const data = await codepipeline.getPipelineState({'name': pipelineList.pipelines[i].name}).promise();
+    const name = data.pipelineName;
+    const stages = data.stageStates;
+    const execData = await codepipeline.listPipelineExecutions({pipelineName: name}).promise();
+    for (let j = 0; j < stages.length; j++) {
+      newProjectList.push(createProject(stages[j].latestExecution.status, name + '-' + stages[j].stageName,
+        execData.pipelineExecutionSummaries[0].lastUpdateTime));
+    }
+  }
+  projectList = newProjectList;
+  return Promise.resolve('ok');
+}
+
+
+setInterval(async function() {
+  try {
+    return setProjectList();
+  } catch(err) {
+    console.log(err);
+  }
+}, 20000);
+
 /**
  * A restify function that will return the xml file created from the current AWS CodePipeline state.
  *
@@ -72,19 +103,6 @@ function createProject(state, name, lastBuildTime) {
  * @return {Promise<Array>} list of projects
  */
 async function createCCProjectList() {
-  const codepipeline = new AWS.CodePipeline();
-  const projectList = [];
 
-  const pipelineList = await codepipeline.listPipelines({}).promise();
-  for (let i = 0; i < pipelineList.pipelines.length; i++) {
-    const data = await codepipeline.getPipelineState({'name': pipelineList.pipelines[i].name}).promise();
-    const name = data.pipelineName;
-    const stages = data.stageStates;
-    const execData = await codepipeline.listPipelineExecutions({pipelineName: name}).promise();
-    for (let j = 0; j < stages.length; j++) {
-      projectList.push(createProject(stages[j].latestExecution.status, name + '-' + stages[j].stageName,
-          execData.pipelineExecutionSummaries[0].lastUpdateTime));
-    }
-  }
   return projectList;
 }
