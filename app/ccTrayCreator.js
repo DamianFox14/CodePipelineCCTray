@@ -2,24 +2,43 @@ const builder = require('xmlbuilder');
 const AWS = require('aws-sdk');
 AWS.config.update({region:'eu-west-1'});
 
+const config = require('../config');
+const codepipeline = new AWS.CodePipeline();
+const cloudwatch = new AWS.CloudWatch ();
+
 let projectList = [];
 setProjectList();
 
 async function setProjectList(){
   let newProjectList = [];
-  const codepipeline = new AWS.CodePipeline();
-
-  const pipelineList = await codepipeline.listPipelines({}).promise();
-  for (let i = 0; i < pipelineList.pipelines.length; i++) {
-    const data = await codepipeline.getPipelineState({'name': pipelineList.pipelines[i].name}).promise();
-    const name = data.pipelineName;
-    const stages = data.stageStates;
-    const execData = await codepipeline.listPipelineExecutions({pipelineName: name}).promise();
-    for (let j = 0; j < stages.length; j++) {
-      newProjectList.push(createProject(stages[j].latestExecution.status, name + '-' + stages[j].stageName,
-        execData.pipelineExecutionSummaries[0].lastUpdateTime));
+  if(config.showStages || config.showStages === 'false') {
+    const pipelineList = await codepipeline.listPipelines({}).promise();
+    for (let i = 0; i < pipelineList.pipelines.length; i++) {
+      const data = await codepipeline.getPipelineState({'name': pipelineList.pipelines[i].name}).promise();
+      const name = data.pipelineName;
+      const stages = data.stageStates;
+      const execData = await codepipeline.listPipelineExecutions({pipelineName: name}).promise();
+      for (let j = 0; j < stages.length; j++) {
+        newProjectList.push(createProject(stages[j].latestExecution.status, name + '-' + stages[j].stageName,
+          execData.pipelineExecutionSummaries[0].lastUpdateTime));
+      }
     }
   }
+
+  if(config.showStages || config.showStages === 'false') {
+    let alarms = await cloudwatch.describeAlarms().promise();
+    for (let i = 0; i < alarms.MetricAlarms.length; i++) {
+      let alarmName = alarms.MetricAlarms[i].AlarmName;
+      let alarmState = alarms.MetricAlarms[i].StateValue;
+      let alarmDate = alarms.MetricAlarms[i].StateUpdatedTimestamp;
+      if(alarmState === 'ALARM') {
+        newProjectList.push(createProject('Failed', alarmName, alarmDate));
+      } else {
+        newProjectList.push(createProject('Succeeded', alarmName, alarmDate));
+      }
+    }
+  }
+
   projectList = newProjectList;
   return Promise.resolve('ok');
 }
@@ -49,8 +68,7 @@ exports.getCCxml = async function(req, res, next) {
       },
     };
     const xml = builder.create(ccFile);
-    res.header('Content-Type', 'application/xml');
-    res.send(xml.end());
+    res.sendRaw(200, xml.end(), {'Content-Type': 'application/xml'});
   } catch(err) {
     console.log(err)
   }
