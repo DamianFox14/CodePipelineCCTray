@@ -1,17 +1,16 @@
 const builder = require('xmlbuilder');
 const AWS = require('aws-sdk');
 AWS.config.update({region:'eu-west-1'});
-
 const config = require('../config');
 const codepipeline = new AWS.CodePipeline();
-const cloudwatch = new AWS.CloudWatch ();
 
 let projectList = [];
+initialiseCloudWatch();
 setProjectList();
 
 async function setProjectList(){
   let newProjectList = [];
-  if(config.showStages || config.showStages === 'false') {
+  if(config.showStages !== 'false') {
     const pipelineList = await codepipeline.listPipelines({}).promise();
     for (let i = 0; i < pipelineList.pipelines.length; i++) {
       const data = await codepipeline.getPipelineState({'name': pipelineList.pipelines[i].name}).promise();
@@ -25,7 +24,7 @@ async function setProjectList(){
     }
   }
 
-  if(config.showStages || config.showStages === 'false') {
+  if(config.showAlarms !== 'false') {
     let alarms = await cloudwatch.describeAlarms().promise();
     for (let i = 0; i < alarms.MetricAlarms.length; i++) {
       let alarmName = alarms.MetricAlarms[i].AlarmName;
@@ -38,6 +37,8 @@ async function setProjectList(){
       }
     }
   }
+
+
 
   projectList = newProjectList;
   return Promise.resolve('ok');
@@ -123,4 +124,34 @@ function createProject(state, name, lastBuildTime) {
 async function createCCProjectList() {
 
   return projectList;
+}
+
+/**
+ * Initialise STS the list of projects in ccTray format.
+ *
+ * @return {Promise<Array>} list of projects
+ */
+async function initialiseCloudWatch() {
+  if(config.alarmsAccount) {
+    const sts = new AWS.STS();
+    let result = await sts.assumeRole({
+      RoleArn: config.alarmsAccount,
+      RoleSessionName: 'testRunner'
+    }).promise();
+
+    const credentials = {
+      accessKeyId: result.Credentials.AccessKeyId,
+      secretAccessKey: result.Credentials.SecretAccessKey,
+      sessionToken: result.Credentials.SessionToken
+    };
+
+    cloudwatch = new AWS.CloudWatch({
+      region: 'eu-west-1', apiVersion: '2015-03-31',
+      credentials: credentials
+    });
+  } else {
+    cloudwatch = new AWS.CloudWatch({
+      region: 'eu-west-1', apiVersion: '2015-03-31'
+    });
+  }
 }

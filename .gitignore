@@ -64,3 +64,6 @@ typings/
 *.iml
 /.idea/*
 
+#config file
+config.json
+
