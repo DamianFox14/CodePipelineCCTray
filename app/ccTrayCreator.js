@@ -9,6 +9,7 @@ const INTERVAL = 20000;
 let count = 0;
 
 let projectList = [];
+let cloudwatchInstances = [];
 initialiseCloudWatch();
 setProjectList();
 
@@ -29,17 +30,23 @@ async function setProjectList(){
   }
 
   if(config.showAlarms !== 'false') {
-    let alarms = await cloudwatch.describeAlarms().promise();
-    for (let i = 0; i < alarms.MetricAlarms.length; i++) {
-      let alarmName = alarms.MetricAlarms[i].AlarmName;
-      let alarmState = alarms.MetricAlarms[i].StateValue;
-      let alarmDate = alarms.MetricAlarms[i].StateUpdatedTimestamp;
-      if(alarmState === 'ALARM') {
-        newProjectList.push(createProject('Failed', alarmName, alarmDate));
-      } else {
-        newProjectList.push(createProject('Succeeded', alarmName, alarmDate));
+    cloudwatchInstances.forEach(async function(entry) {
+      let alarms = await entry.instance.describeAlarms().promise();
+      for (let i = 0; i < alarms.MetricAlarms.length; i++) {
+        let alarmName = alarms.MetricAlarms[i].AlarmName;
+        let alarmState = alarms.MetricAlarms[i].StateValue;
+        let alarmDate = alarms.MetricAlarms[i].StateUpdatedTimestamp;
+        if(entry.alarmName=== '*' || entry.alarmName===alarmName) {
+          if (alarmState === 'ALARM') {
+            newProjectList.push(createProject('Failed', alarmName, alarmDate));
+          } else if (alarmState === 'INSUFFICIENT_DATA') {
+            newProjectList.push(createProject('InProgress', alarmName, alarmDate));
+          } else {
+            newProjectList.push(createProject('Succeeded', alarmName, alarmDate));
+          }
+        }
       }
-    }
+    });
   }
 
 
@@ -140,27 +147,40 @@ async function createCCProjectList() {
  * @return {Promise<Array>} list of projects
  */
 async function initialiseCloudWatch() {
-  if(config.alarmsAccount) {
-    const sts = new AWS.STS();
-    let result = await sts.assumeRole({
-      RoleArn: config.alarmsAccount,
-      DurationSeconds: 900,
-      RoleSessionName: 'testRunner'
-    }).promise();
 
-    const credentials = {
-      accessKeyId: result.Credentials.AccessKeyId,
-      secretAccessKey: result.Credentials.SecretAccessKey,
-      sessionToken: result.Credentials.SessionToken
-    };
+  config.alarmsAccounts.forEach(async function(entry) {
+    alarmName = entry.alarmName? entry.alarmName : '*';
+    if (entry.accountArn) {
+      const sts = new AWS.STS();
+      let result = await sts.assumeRole({
+        RoleArn: entry.accountArn,
+        DurationSeconds: 900,
+        RoleSessionName: 'testRunner'
+      }).promise();
 
-    cloudwatch = new AWS.CloudWatch({
-      region: 'eu-west-1', apiVersion: '2015-03-31',
-      credentials: credentials
-    });
-  } else {
-    cloudwatch = new AWS.CloudWatch({
-      region: 'eu-west-1', apiVersion: '2015-03-31'
-    });
-  }
+      const credentials = {
+        accessKeyId: result.Credentials.AccessKeyId,
+        secretAccessKey: result.Credentials.SecretAccessKey,
+        sessionToken: result.Credentials.SessionToken
+      };
+
+      cloudwatchInstances.push(
+        {
+          "instance": new AWS.CloudWatch({
+            region: 'eu-west-1', apiVersion: '2015-03-31',
+            credentials: credentials
+          }),
+          "alarmName": alarmName
+        });
+
+    } else {
+      cloudwatchInstances.push(
+        {
+          "instance": new AWS.CloudWatch({
+            region: 'eu-west-1', apiVersion: '2015-03-31'
+          }),
+          "alarmName": alarmName
+        });
+    }
+  });
 }
