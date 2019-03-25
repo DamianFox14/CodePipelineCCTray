@@ -1,8 +1,12 @@
 const builder = require('xmlbuilder');
 const AWS = require('aws-sdk');
 AWS.config.update({region:'eu-west-1'});
+
 const config = require('../config');
 const codepipeline = new AWS.CodePipeline();
+
+const INTERVAL = 20000;
+let count = 0;
 
 let projectList = [];
 initialiseCloudWatch();
@@ -47,11 +51,15 @@ async function setProjectList(){
 
 setInterval(async function() {
   try {
+    count++;
+    if((count*INTERVAL) > 3600000) {
+      initialiseCloudWatch();
+    }
     return setProjectList();
   } catch(err) {
     console.log(err);
   }
-}, 20000);
+}, INTERVAL);
 
 /**
  * A restify function that will return the xml file created from the current AWS CodePipeline state.
@@ -136,6 +144,7 @@ async function initialiseCloudWatch() {
     const sts = new AWS.STS();
     let result = await sts.assumeRole({
       RoleArn: config.alarmsAccount,
+      DurationSeconds: 900,
       RoleSessionName: 'testRunner'
     }).promise();
 
