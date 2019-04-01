@@ -57,7 +57,6 @@ async function setProjectList(){
 
 
 setInterval(async function() {
-  console.log("start "+new Date())
   try {
     count++;
     if((count*INTERVAL) > 3600000) {
