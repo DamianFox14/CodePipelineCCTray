@@ -5,7 +5,7 @@ AWS.config.update({region:'eu-west-1'});
 const config = require('../config');
 const codepipeline = new AWS.CodePipeline();
 
-const INTERVAL = 20000;
+const INTERVAL = 30000;
 let count = 0;
 
 let projectList = [];
@@ -30,7 +30,7 @@ async function setProjectList(){
   }
 
   if(config.showAlarms !== 'false') {
-    cloudwatchInstances.forEach(async function(entry) {
+    await cloudwatchInstances.forEach(async function(entry) {
       let alarms = await entry.instance.describeAlarms().promise();
       for (let i = 0; i < alarms.MetricAlarms.length; i++) {
         let alarmName = alarms.MetricAlarms[i].AlarmName;
@@ -57,15 +57,18 @@ async function setProjectList(){
 
 
 setInterval(async function() {
+  console.log("start "+new Date())
   try {
     count++;
     if((count*INTERVAL) > 3600000) {
       initialiseCloudWatch();
     }
+
     return setProjectList();
   } catch(err) {
     console.log(err);
   }
+
 }, INTERVAL);
 
 /**
@@ -147,8 +150,8 @@ async function createCCProjectList() {
  * @return {Promise<Array>} list of projects
  */
 async function initialiseCloudWatch() {
-
-  config.alarmsAccounts.forEach(async function(entry) {
+  let newCloudwatchInstances = [];
+  await config.alarmsAccounts.forEach(async function(entry) {
     alarmName = entry.alarmName? entry.alarmName : '*';
     if (entry.accountArn) {
       const sts = new AWS.STS();
@@ -164,7 +167,7 @@ async function initialiseCloudWatch() {
         sessionToken: result.Credentials.SessionToken
       };
 
-      cloudwatchInstances.push(
+      newCloudwatchInstances.push(
         {
           "instance": new AWS.CloudWatch({
             region: 'eu-west-1', apiVersion: '2015-03-31',
@@ -174,7 +177,7 @@ async function initialiseCloudWatch() {
         });
 
     } else {
-      cloudwatchInstances.push(
+      newCloudwatchInstances.push(
         {
           "instance": new AWS.CloudWatch({
             region: 'eu-west-1', apiVersion: '2015-03-31'
@@ -183,4 +186,5 @@ async function initialiseCloudWatch() {
         });
     }
   });
+  cloudwatchInstances = newCloudwatchInstances;
 }
