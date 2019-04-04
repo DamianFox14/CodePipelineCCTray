@@ -18,13 +18,27 @@ async function setProjectList(){
   if(config.showStages !== 'false') {
     const pipelineList = await codepipeline.listPipelines({}).promise();
     for (let i = 0; i < pipelineList.pipelines.length; i++) {
-      const data = await codepipeline.getPipelineState({'name': pipelineList.pipelines[i].name}).promise();
-      const name = data.pipelineName;
-      const stages = data.stageStates;
-      const execData = await codepipeline.listPipelineExecutions({pipelineName: name}).promise();
-      for (let j = 0; j < stages.length; j++) {
-        newProjectList.push(createProject(stages[j].latestExecution.status, name + '-' + stages[j].stageName,
-          execData.pipelineExecutionSummaries[0].lastUpdateTime));
+      try {
+        const data = await codepipeline.getPipelineState({'name': pipelineList.pipelines[i].name}).promise();
+        const name = data.pipelineName;
+        const stages = data.stageStates;
+        const execData = await codepipeline.listPipelineExecutions({pipelineName: name}).promise();
+        for (let j = 0; j < stages.length; j++) {
+          try {
+            let status = 'Failed';
+            if (stages[j].latestExecution !== undefined || stages[j].latestExecution.status !== undefined) {
+              status = stages[j].latestExecution.status;
+            }
+            newProjectList.push(createProject(stages[j].latestExecution.status, name + '-' + stages[j].stageName,
+              execData.pipelineExecutionSummaries[0].lastUpdateTime));
+          } catch (err) {
+            console.log('Error adding stage '+name+' status: '+JSON.stringify(err));
+            newProjectList.push(createProject('Failed', name + '-' + stages[j].stageName,
+              execData.pipelineExecutionSummaries[0].lastUpdateTime));
+          }
+        }
+      } catch(err) {
+        console.log('Error adding stage '+name+' status: '+JSON.stringify(err));
       }
     }
   }
