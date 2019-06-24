@@ -29,7 +29,7 @@ async function setProjectList(){
             if (stages[j].latestExecution !== undefined && stages[j].latestExecution.status !== undefined) {
               status = stages[j].latestExecution.status;
             }
-            newProjectList.push(createProject(stages[j].latestExecution.status, name + '-' + stages[j].stageName,
+            newProjectList.push(createProject(status, name + '-' + stages[j].stageName,
               execData.pipelineExecutionSummaries[0].lastUpdateTime));
           } catch (err) {
             console.log('Error adding stage '+name+' status: '+JSON.stringify(err));
