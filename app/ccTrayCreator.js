@@ -26,7 +26,7 @@ async function setProjectList(){
         for (let j = 0; j < stages.length; j++) {
           try {
             let status = 'Failed';
-            if (stages[j].latestExecution !== undefined || stages[j].latestExecution.status !== undefined) {
+            if (stages[j].latestExecution !== undefined && stages[j].latestExecution.status !== undefined) {
               status = stages[j].latestExecution.status;
             }
             newProjectList.push(createProject(stages[j].latestExecution.status, name + '-' + stages[j].stageName,
