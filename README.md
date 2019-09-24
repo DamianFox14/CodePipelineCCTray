@@ -1,4 +1,4 @@
-# CodePipelineCCTray
+# CodePipelineCCTray [![Quality Gate Status](https://sonarcloud.io/api/project_badges/measure?project=DamianFox14_CodePipelineCCTray&metric=alert_status)](https://sonarcloud.io/dashboard?id=DamianFox14_CodePipelineCCTray)
 This is an application that hosts a cc.xml file in the [CCTray](https://cctray.org/v1) format created from AWS SDK calls to 
 [CodePipeline](https://aws.amazon.com/codepipeline/)
 
