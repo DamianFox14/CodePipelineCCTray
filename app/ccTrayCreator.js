@@ -165,7 +165,7 @@ async function createCCProjectList() {
 async function initialiseCloudWatch() {
   let newCloudwatchInstances = [];
   await config.alarmsAccounts.forEach(async function(entry) {
-    alarmName = entry.alarmName? entry.alarmName : '*';
+    const alarmName = entry.alarmName? entry.alarmName : '*';
     if (entry.accountArn) {
       const sts = new AWS.STS();
       let result = await sts.assumeRole({
