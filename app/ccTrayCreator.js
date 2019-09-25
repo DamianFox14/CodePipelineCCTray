@@ -201,3 +201,227 @@ async function initialiseCloudWatch() {
   });
   cloudwatchInstances = newCloudwatchInstances;
 }
+
+async function setProjectList0(){
+  let newProjectList = [];
+  if(config.showStages !== 'false') {
+    const pipelineList = await codepipeline.listPipelines({}).promise();
+    for (let i = 0; i < pipelineList.pipelines.length; i++) {
+      try {
+        const data = await codepipeline.getPipelineState({'name': pipelineList.pipelines[i].name}).promise();
+        const name = data.pipelineName;
+        const stages = data.stageStates;
+        const execData = await codepipeline.listPipelineExecutions({pipelineName: name}).promise();
+        for (let j = 0; j < stages.length; j++) {
+          try {
+            let status = 'Failed';
+            if (stages[j].latestExecution !== undefined && stages[j].latestExecution.status !== undefined) {
+              status = stages[j].latestExecution.status;
+            }
+            newProjectList.push(createProject(status, name + '-' + stages[j].stageName,
+              execData.pipelineExecutionSummaries[0].lastUpdateTime));
+          } catch (err) {
+            console.log('Error adding stage '+name+' status: '+JSON.stringify(err));
+            newProjectList.push(createProject('Failed', name + '-' + stages[j].stageName,
+              execData.pipelineExecutionSummaries[0].lastUpdateTime));
+          }
+        }
+      } catch(err) {
+        console.log('Error adding stage '+name+' status: '+JSON.stringify(err));
+      }
+    }
+  }
+
+  if(config.showAlarms !== 'false') {
+    await cloudwatchInstances.forEach(async function(entry) {
+      let alarms = await entry.instance.describeAlarms().promise();
+      for (let i = 0; i < alarms.MetricAlarms.length; i++) {
+        let alarmName = alarms.MetricAlarms[i].AlarmName;
+        let alarmState = alarms.MetricAlarms[i].StateValue;
+        let alarmDate = alarms.MetricAlarms[i].StateUpdatedTimestamp;
+        if(entry.alarmName=== '*' || entry.alarmName===alarmName) {
+          if (alarmState === 'ALARM') {
+            newProjectList.push(createProject('Failed', alarmName, alarmDate));
+          } else if (alarmState === 'INSUFFICIENT_DATA') {
+            newProjectList.push(createProject('InProgress', alarmName, alarmDate));
+          } else {
+            newProjectList.push(createProject('Succeeded', alarmName, alarmDate));
+          }
+        }
+      }
+    });
+  }
+
+
+
+  projectList = newProjectList;
+  return Promise.resolve('ok');
+}
+
+async function setProjectList1(){
+  let newProjectList = [];
+  if(config.showStages !== 'false') {
+    const pipelineList = await codepipeline.listPipelines({}).promise();
+    for (let i = 0; i < pipelineList.pipelines.length; i++) {
+      try {
+        const data = await codepipeline.getPipelineState({'name': pipelineList.pipelines[i].name}).promise();
+        const name = data.pipelineName;
+        const stages = data.stageStates;
+        const execData = await codepipeline.listPipelineExecutions({pipelineName: name}).promise();
+        for (let j = 0; j < stages.length; j++) {
+          try {
+            let status = 'Failed';
+            if (stages[j].latestExecution !== undefined && stages[j].latestExecution.status !== undefined) {
+              status = stages[j].latestExecution.status;
+            }
+            newProjectList.push(createProject(status, name + '-' + stages[j].stageName,
+              execData.pipelineExecutionSummaries[0].lastUpdateTime));
+          } catch (err) {
+            console.log('Error adding stage '+name+' status: '+JSON.stringify(err));
+            newProjectList.push(createProject('Failed', name + '-' + stages[j].stageName,
+              execData.pipelineExecutionSummaries[0].lastUpdateTime));
+          }
+        }
+      } catch(err) {
+        console.log('Error adding stage '+name+' status: '+JSON.stringify(err));
+      }
+    }
+  }
+
+  if(config.showAlarms !== 'false') {
+    await cloudwatchInstances.forEach(async function(entry) {
+      let alarms = await entry.instance.describeAlarms().promise();
+      for (let i = 0; i < alarms.MetricAlarms.length; i++) {
+        let alarmName = alarms.MetricAlarms[i].AlarmName;
+        let alarmState = alarms.MetricAlarms[i].StateValue;
+        let alarmDate = alarms.MetricAlarms[i].StateUpdatedTimestamp;
+        if(entry.alarmName=== '*' || entry.alarmName===alarmName) {
+          if (alarmState === 'ALARM') {
+            newProjectList.push(createProject('Failed', alarmName, alarmDate));
+          } else if (alarmState === 'INSUFFICIENT_DATA') {
+            newProjectList.push(createProject('InProgress', alarmName, alarmDate));
+          } else {
+            newProjectList.push(createProject('Succeeded', alarmName, alarmDate));
+          }
+        }
+      }
+    });
+  }
+
+
+
+  projectList = newProjectList;
+  return Promise.resolve('ok');
+}
+
+async function setProjectList2(){
+  let newProjectList = [];
+  if(config.showStages !== 'false') {
+    const pipelineList = await codepipeline.listPipelines({}).promise();
+    for (let i = 0; i < pipelineList.pipelines.length; i++) {
+      try {
+        const data = await codepipeline.getPipelineState({'name': pipelineList.pipelines[i].name}).promise();
+        const name = data.pipelineName;
+        const stages = data.stageStates;
+        const execData = await codepipeline.listPipelineExecutions({pipelineName: name}).promise();
+        for (let j = 0; j < stages.length; j++) {
+          try {
+            let status = 'Failed';
+            if (stages[j].latestExecution !== undefined && stages[j].latestExecution.status !== undefined) {
+              status = stages[j].latestExecution.status;
+            }
+            newProjectList.push(createProject(status, name + '-' + stages[j].stageName,
+              execData.pipelineExecutionSummaries[0].lastUpdateTime));
+          } catch (err) {
+            console.log('Error adding stage '+name+' status: '+JSON.stringify(err));
+            newProjectList.push(createProject('Failed', name + '-' + stages[j].stageName,
+              execData.pipelineExecutionSummaries[0].lastUpdateTime));
+          }
+        }
+      } catch(err) {
+        console.log('Error adding stage '+name+' status: '+JSON.stringify(err));
+      }
+    }
+  }
+
+  if(config.showAlarms !== 'false') {
+    await cloudwatchInstances.forEach(async function(entry) {
+      let alarms = await entry.instance.describeAlarms().promise();
+      for (let i = 0; i < alarms.MetricAlarms.length; i++) {
+        let alarmName = alarms.MetricAlarms[i].AlarmName;
+        let alarmState = alarms.MetricAlarms[i].StateValue;
+        let alarmDate = alarms.MetricAlarms[i].StateUpdatedTimestamp;
+        if(entry.alarmName=== '*' || entry.alarmName===alarmName) {
+          if (alarmState === 'ALARM') {
+            newProjectList.push(createProject('Failed', alarmName, alarmDate));
+          } else if (alarmState === 'INSUFFICIENT_DATA') {
+            newProjectList.push(createProject('InProgress', alarmName, alarmDate));
+          } else {
+            newProjectList.push(createProject('Succeeded', alarmName, alarmDate));
+          }
+        }
+      }
+    });
+  }
+
+
+
+  projectList = newProjectList;
+  return Promise.resolve('ok');
+}
+
+async function setProjectList3(){
+  let newProjectList = [];
+  if(config.showStages !== 'false') {
+    const pipelineList = await codepipeline.listPipelines({}).promise();
+    for (let i = 0; i < pipelineList.pipelines.length; i++) {
+      try {
+        const data = await codepipeline.getPipelineState({'name': pipelineList.pipelines[i].name}).promise();
+        const name = data.pipelineName;
+        const stages = data.stageStates;
+        const execData = await codepipeline.listPipelineExecutions({pipelineName: name}).promise();
+        for (let j = 0; j < stages.length; j++) {
+          try {
+            let status = 'Failed';
+            if (stages[j].latestExecution !== undefined && stages[j].latestExecution.status !== undefined) {
+              status = stages[j].latestExecution.status;
+            }
+            newProjectList.push(createProject(status, name + '-' + stages[j].stageName,
+              execData.pipelineExecutionSummaries[0].lastUpdateTime));
+          } catch (err) {
+            console.log('Error adding stage '+name+' status: '+JSON.stringify(err));
+            newProjectList.push(createProject('Failed', name + '-' + stages[j].stageName,
+              execData.pipelineExecutionSummaries[0].lastUpdateTime));
+          }
+        }
+      } catch(err) {
+        console.log('Error adding stage '+name+' status: '+JSON.stringify(err));
+      }
+    }
+  }
+
+  if(config.showAlarms !== 'false') {
+    await cloudwatchInstances.forEach(async function(entry) {
+      let alarms = await entry.instance.describeAlarms().promise();
+      for (let i = 0; i < alarms.MetricAlarms.length; i++) {
+        let alarmName = alarms.MetricAlarms[i].AlarmName;
+        let alarmState = alarms.MetricAlarms[i].StateValue;
+        let alarmDate = alarms.MetricAlarms[i].StateUpdatedTimestamp;
+        if(entry.alarmName=== '*' || entry.alarmName===alarmName) {
+          if (alarmState === 'ALARM') {
+            newProjectList.push(createProject('Failed', alarmName, alarmDate));
+          } else if (alarmState === 'INSUFFICIENT_DATA') {
+            newProjectList.push(createProject('InProgress', alarmName, alarmDate));
+          } else {
+            newProjectList.push(createProject('Succeeded', alarmName, alarmDate));
+          }
+        }
+      }
+    });
+  }
+
+
+
+  projectList = newProjectList;
+  return Promise.resolve('ok');
+}
