@@ -2,7 +2,7 @@ const builder = require('xmlbuilder');
 const AWS = require('aws-sdk');
 const config = require('../config');
 
-if (config.credentials.secretAccessKey && config.credentials.accessKey) {
+if (config.credentials && config.credentials.secretAccessKey && config.credentials.accessKey) {
   AWS.config.update({region: 'eu-west-1',
     accessKeyId: config.credentials.accessKey,
     secretAccessKey: config.credentials.secretAccessKey});
