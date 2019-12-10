@@ -16,8 +16,12 @@ let count = 0;
 let projectList = [];
 let cloudwatchInstances = [];
 let codepipelineInstances = [];
-initialiseCloudWatch();
-setProjectList();
+
+(async () => {
+  await initialiseCloudWatch();
+  await initialisePipelineInstances();
+  await setProjectList();
+})();
 
 /**
  * gets all the relevant information for the cc.xml
@@ -26,37 +30,40 @@ setProjectList();
 async function setProjectList() {
   const newProjectList = [];
 
-  const codepipeline = new AWS.CodePipeline();
   if (config.showStages) {
-    const pipelineList = await codepipeline.listPipelines({}).promise();
-    for (let i = 0; i < pipelineList.pipelines.length; i++) {
-      try {
-        const data = await codepipeline.getPipelineState({'name': pipelineList.pipelines[i].name}).promise();
-        const name = data.pipelineName;
-        const stages = data.stageStates;
-        const execData = await codepipeline.listPipelineExecutions({pipelineName: name}).promise();
-        for (let j = 0; j < stages.length; j++) {
-          try {
-            let status = 'Failed';
-            if (stages[j].latestExecution !== undefined && stages[j].latestExecution.status !== undefined) {
-              status = stages[j].latestExecution.status;
+    for (let entry of codepipelineInstances) {
+      const pipelineList = await entry.instance.listPipelines({}).promise();
+      for (let i = 0; i < pipelineList.pipelines.length; i++) {
+        try {
+          const data = await entry.instance.getPipelineState({'name': pipelineList.pipelines[i].name}).promise();
+          const name = data.pipelineName;
+          const stages = data.stageStates;
+          if (entry.pipelineName=== '*' || entry.pipelineName===name) {
+            const execData = await entry.instance.listPipelineExecutions({pipelineName: name}).promise();
+            for (let j = 0; j < stages.length; j++) {
+              try {
+                let status = 'Failed';
+                if (stages[j].latestExecution !== undefined && stages[j].latestExecution.status !== undefined) {
+                  status = stages[j].latestExecution.status;
+                }
+                newProjectList.push(createProject(status, name + '-' + stages[j].stageName,
+                  execData.pipelineExecutionSummaries[0].lastUpdateTime));
+              } catch (err) {
+                console.log('Error adding stage ' + name + ' status: ' + JSON.stringify(err));
+                newProjectList.push(createProject('Failed', name + '-' + stages[j].stageName,
+                  execData.pipelineExecutionSummaries[0].lastUpdateTime));
+              }
             }
-            newProjectList.push(createProject(status, name + '-' + stages[j].stageName,
-                execData.pipelineExecutionSummaries[0].lastUpdateTime));
-          } catch (err) {
-            console.log('Error adding stage '+name+' status: '+JSON.stringify(err));
-            newProjectList.push(createProject('Failed', name + '-' + stages[j].stageName,
-                execData.pipelineExecutionSummaries[0].lastUpdateTime));
           }
+        } catch (err) {
+          console.log('Error adding stage ' + name + ' status: ' + JSON.stringify(err));
         }
-      } catch (err) {
-        console.log('Error adding stage '+name+' status: '+JSON.stringify(err));
       }
     }
   }
 
   if (config.showAlarms) {
-    await cloudwatchInstances.forEach(async function(entry) {
+    for (let entry of cloudwatchInstances) {
       const alarms = await entry.instance.describeAlarms().promise();
       for (let i = 0; i < alarms.MetricAlarms.length; i++) {
         const alarmName = alarms.MetricAlarms[i].AlarmName;
@@ -72,11 +79,10 @@ async function setProjectList() {
           }
         }
       }
-    });
+    };
   }
 
   projectList = newProjectList;
-  return Promise.resolve('ok');
 }
 
 
@@ -85,6 +91,7 @@ setInterval(async function() {
     count++;
     if ((count*INTERVAL) > 600000) {
       initialiseCloudWatch();
+      initialisePipelineInstances();
     }
 
     return setProjectList();
@@ -217,7 +224,7 @@ async function initialiseCloudWatch() {
 async function initialisePipelineInstances() {
   const newCodepipelineInstances = [];
   for (let account of config.pipelineAccounts) {
-    const stageName = account.stageName? account.stageName : '*';
+    const stageName = account.pipelineName? account.pipelineName : '*';
     if (account.accountArn) {
       const sts = new AWS.STS();
       const result = await sts.assumeRole({
@@ -234,19 +241,19 @@ async function initialisePipelineInstances() {
 
       newCodepipelineInstances.push(
         {
-          'instance': new AWS.CloudWatch({
-            region: 'eu-west-1', apiVersion: '2015-03-31',
+          'instance': new AWS.CodePipeline({
+            region: 'eu-west-1',
             credentials: credentials,
           }),
-          'alarmName': alarmName,
+          'pipelineName': stageName,
         });
     } else {
       newCodepipelineInstances.push(
         {
-          'instance': new AWS.CloudWatch({
-            region: 'eu-west-1', apiVersion: '2015-03-31',
+          'instance': new AWS.CodePipeline({
+            region: 'eu-west-1'
           }),
-          'alarmName': alarmName,
+          'pipelineName': stageName,
         });
     }
   }
