@@ -1,7 +1,7 @@
 {
   "name": "test-parser",
-  "version": "1.0.0",
-  "description": "test parser",
+  "version": "2.0.0",
+  "description": "cctray.xml creator from codepipeline",
   "scripts": {
     "start": "node app/index.js",
     "lint": "./node_modules/.bin/eslint app/*.js",
@@ -15,7 +15,6 @@
     "eslint-config-google": "^0.14.0",
     "mocha": "^6.2.2",
     "nyc": "^14.1.1",
-    "rewire": "^4.0.1",
     "sinon": "^7.5.0"
   },
   "dependencies": {

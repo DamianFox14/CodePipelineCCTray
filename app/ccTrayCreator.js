@@ -1,27 +1,31 @@
 const builder = require('xmlbuilder');
 const AWS = require('aws-sdk');
-const config = require('../config');
-
-if (config.credentials && config.credentials.secretAccessKey && config.credentials.accessKey) {
-  AWS.config.update({region: 'eu-west-1',
-    accessKeyId: config.credentials.accessKey,
-    secretAccessKey: config.credentials.secretAccessKey});
-} else {
-  AWS.config.update({region: 'eu-west-1'});
-}
 
 const INTERVAL = 30000;
 let count = 0;
-
 let projectList = [];
 let cloudwatchInstances = [];
 let codepipelineInstances = [];
 
-(async () => {
+let config = {};
+
+
+exports.initialize = async (configParam) => {
+  config = configParam;
+  if (config.credentials && config.credentials.secretAccessKey && config.credentials.accessKey) {
+    AWS.config.update({
+      region: 'eu-west-1',
+      accessKeyId: config.credentials.accessKey,
+      secretAccessKey: config.credentials.secretAccessKey,
+    });
+  } else {
+    AWS.config.update({region: 'eu-west-1'});
+  }
+
   await initialiseCloudWatch();
   await initialisePipelineInstances();
   await setProjectList();
-})();
+}
 
 /**
  * gets all the relevant information for the cc.xml
@@ -38,7 +42,7 @@ async function setProjectList() {
           const data = await entry.instance.getPipelineState({'name': pipelineList.pipelines[i].name}).promise();
           const name = data.pipelineName;
           const stages = data.stageStates;
-          if (entry.pipelineName=== '*' || entry.pipelineName===name) {
+          if (entry.pipelineName === '*' || entry.pipelineName === name) {
             const execData = await entry.instance.listPipelineExecutions({pipelineName: name}).promise();
             for (let j = 0; j < stages.length; j++) {
               try {
@@ -69,7 +73,7 @@ async function setProjectList() {
         const alarmName = alarms.MetricAlarms[i].AlarmName;
         const alarmState = alarms.MetricAlarms[i].StateValue;
         const alarmDate = alarms.MetricAlarms[i].StateUpdatedTimestamp;
-        if (entry.alarmName=== '*' || entry.alarmName===alarmName) {
+        if (entry.alarmName === '*' || entry.alarmName === alarmName) {
           if (alarmState === 'ALARM') {
             newProjectList.push(createProject('Failed', alarmName, alarmDate));
           } else if (alarmState === 'INSUFFICIENT_DATA') {
@@ -85,20 +89,21 @@ async function setProjectList() {
   projectList = newProjectList;
 }
 
+exports.startThread = ()=> {
+  setInterval(async function() {
+    try {
+      count++;
+      if ((count * INTERVAL) > 600000) {
+        await initialiseCloudWatch();
+        await initialisePipelineInstances();
+      }
 
-setInterval(async function() {
-  try {
-    count++;
-    if ((count*INTERVAL) > 600000) {
-      initialiseCloudWatch();
-      initialisePipelineInstances();
+      return await setProjectList();
+    } catch (err) {
+      console.log(err);
     }
-
-    return setProjectList();
-  } catch (err) {
-    console.log(err);
-  }
-}, INTERVAL);
+  }, INTERVAL);
+}
 
 /**
  * A restify function that will return the xml file created from the current AWS CodePipeline state.
@@ -180,7 +185,7 @@ async function createCCProjectList() {
 async function initialiseCloudWatch() {
   const newCloudwatchInstances = [];
   for (let account of config.alarmsAccounts) {
-    const alarmName = account.alarmName? account.alarmName : '*';
+    const alarmName = account.alarmName ? account.alarmName : '*';
     if (account.accountArn) {
       const sts = new AWS.STS();
       const result = await sts.assumeRole({
@@ -196,21 +201,21 @@ async function initialiseCloudWatch() {
       };
 
       newCloudwatchInstances.push(
-          {
-            'instance': new AWS.CloudWatch({
-              region: 'eu-west-1', apiVersion: '2015-03-31',
-              credentials: credentials,
-            }),
-            'alarmName': alarmName,
-          });
+        {
+          'instance': new AWS.CloudWatch({
+            region: 'eu-west-1', apiVersion: '2015-03-31',
+            credentials: credentials,
+          }),
+          'alarmName': alarmName,
+        });
     } else {
       newCloudwatchInstances.push(
-          {
-            'instance': new AWS.CloudWatch({
-              region: 'eu-west-1', apiVersion: '2015-03-31',
-            }),
-            'alarmName': alarmName,
-          });
+        {
+          'instance': new AWS.CloudWatch({
+            region: 'eu-west-1', apiVersion: '2015-03-31',
+          }),
+          'alarmName': alarmName,
+        });
     }
   }
   cloudwatchInstances = newCloudwatchInstances;
@@ -224,7 +229,7 @@ async function initialiseCloudWatch() {
 async function initialisePipelineInstances() {
   const newCodepipelineInstances = [];
   for (let account of config.pipelineAccounts) {
-    const pipelineName = account.pipelineName? account.pipelineName : '*';
+    const pipelineName = account.pipelineName ? account.pipelineName : '*';
     if (account.accountArn) {
       const sts = new AWS.STS();
       const result = await sts.assumeRole({
@@ -251,7 +256,7 @@ async function initialisePipelineInstances() {
       newCodepipelineInstances.push(
         {
           'instance': new AWS.CodePipeline({
-            region: 'eu-west-1'
+            region: 'eu-west-1',
           }),
           'pipelineName': pipelineName,
         });
