@@ -10,13 +10,12 @@ if (config.credentials && config.credentials.secretAccessKey && config.credentia
   AWS.config.update({region: 'eu-west-1'});
 }
 
-const codepipeline = new AWS.CodePipeline();
-
 const INTERVAL = 30000;
 let count = 0;
 
 let projectList = [];
 let cloudwatchInstances = [];
+let codepipelineInstances = [];
 initialiseCloudWatch();
 setProjectList();
 
@@ -26,6 +25,8 @@ setProjectList();
  */
 async function setProjectList() {
   const newProjectList = [];
+
+  const codepipeline = new AWS.CodePipeline();
   if (config.showStages) {
     const pipelineList = await codepipeline.listPipelines({}).promise();
     for (let i = 0; i < pipelineList.pipelines.length; i++) {
@@ -82,7 +83,7 @@ async function setProjectList() {
 setInterval(async function() {
   try {
     count++;
-    if ((count*INTERVAL) > 3600000) {
+    if ((count*INTERVAL) > 600000) {
       initialiseCloudWatch();
     }
 
@@ -171,12 +172,12 @@ async function createCCProjectList() {
  */
 async function initialiseCloudWatch() {
   const newCloudwatchInstances = [];
-  await config.alarmsAccounts.forEach(async function(entry) {
-    const alarmName = entry.alarmName? entry.alarmName : '*';
-    if (entry.accountArn) {
+  for (let account of config.alarmsAccounts) {
+    const alarmName = account.alarmName? account.alarmName : '*';
+    if (account.accountArn) {
       const sts = new AWS.STS();
       const result = await sts.assumeRole({
-        RoleArn: entry.accountArn,
+        RoleArn: account.accountArn,
         DurationSeconds: 900,
         RoleSessionName: 'testRunner',
       }).promise();
@@ -204,6 +205,50 @@ async function initialiseCloudWatch() {
             'alarmName': alarmName,
           });
     }
-  });
+  }
   cloudwatchInstances = newCloudwatchInstances;
+}
+
+/**
+ * Initialise STS the list of projects in ccTray format.
+ *
+ * @return {Promise<Array>} list of projects
+ */
+async function initialisePipelineInstances() {
+  const newCodepipelineInstances = [];
+  for (let account of config.pipelineAccounts) {
+    const stageName = account.stageName? account.stageName : '*';
+    if (account.accountArn) {
+      const sts = new AWS.STS();
+      const result = await sts.assumeRole({
+        RoleArn: account.accountArn,
+        DurationSeconds: 900,
+        RoleSessionName: 'testRunner',
+      }).promise();
+
+      const credentials = {
+        accessKeyId: result.Credentials.AccessKeyId,
+        secretAccessKey: result.Credentials.SecretAccessKey,
+        sessionToken: result.Credentials.SessionToken,
+      };
+
+      newCodepipelineInstances.push(
+        {
+          'instance': new AWS.CloudWatch({
+            region: 'eu-west-1', apiVersion: '2015-03-31',
+            credentials: credentials,
+          }),
+          'alarmName': alarmName,
+        });
+    } else {
+      newCodepipelineInstances.push(
+        {
+          'instance': new AWS.CloudWatch({
+            region: 'eu-west-1', apiVersion: '2015-03-31',
+          }),
+          'alarmName': alarmName,
+        });
+    }
+  }
+  codepipelineInstances = newCodepipelineInstances;
 }
