@@ -1,8 +1,15 @@
 const builder = require('xmlbuilder');
 const AWS = require('aws-sdk');
-AWS.config.update({region:'eu-west-1'});
-
 const config = require('../config');
+
+if (config.credentials.secretAccessKey && config.credentials.accessKey) {
+  AWS.config.update({region: 'eu-west-1',
+    accessKeyId: config.credentials.accessKey,
+    secretAccessKey: config.credentials.secretAccessKey});
+} else {
+  AWS.config.update({region: 'eu-west-1'});
+}
+
 const codepipeline = new AWS.CodePipeline();
 
 const INTERVAL = 30000;
@@ -13,9 +20,13 @@ let cloudwatchInstances = [];
 initialiseCloudWatch();
 setProjectList();
 
-async function setProjectList(){
-  let newProjectList = [];
-  if(config.showStages !== 'false') {
+/**
+ * gets all the relevant information for the cc.xml
+ * @return {Promise<string>}
+ */
+async function setProjectList() {
+  const newProjectList = [];
+  if (config.showStages) {
     const pipelineList = await codepipeline.listPipelines({}).promise();
     for (let i = 0; i < pipelineList.pipelines.length; i++) {
       try {
@@ -30,27 +41,27 @@ async function setProjectList(){
               status = stages[j].latestExecution.status;
             }
             newProjectList.push(createProject(status, name + '-' + stages[j].stageName,
-              execData.pipelineExecutionSummaries[0].lastUpdateTime));
+                execData.pipelineExecutionSummaries[0].lastUpdateTime));
           } catch (err) {
             console.log('Error adding stage '+name+' status: '+JSON.stringify(err));
             newProjectList.push(createProject('Failed', name + '-' + stages[j].stageName,
-              execData.pipelineExecutionSummaries[0].lastUpdateTime));
+                execData.pipelineExecutionSummaries[0].lastUpdateTime));
           }
         }
-      } catch(err) {
+      } catch (err) {
         console.log('Error adding stage '+name+' status: '+JSON.stringify(err));
       }
     }
   }
 
-  if(config.showAlarms !== 'false') {
+  if (config.showAlarms) {
     await cloudwatchInstances.forEach(async function(entry) {
-      let alarms = await entry.instance.describeAlarms().promise();
+      const alarms = await entry.instance.describeAlarms().promise();
       for (let i = 0; i < alarms.MetricAlarms.length; i++) {
-        let alarmName = alarms.MetricAlarms[i].AlarmName;
-        let alarmState = alarms.MetricAlarms[i].StateValue;
-        let alarmDate = alarms.MetricAlarms[i].StateUpdatedTimestamp;
-        if(entry.alarmName=== '*' || entry.alarmName===alarmName) {
+        const alarmName = alarms.MetricAlarms[i].AlarmName;
+        const alarmState = alarms.MetricAlarms[i].StateValue;
+        const alarmDate = alarms.MetricAlarms[i].StateUpdatedTimestamp;
+        if (entry.alarmName=== '*' || entry.alarmName===alarmName) {
           if (alarmState === 'ALARM') {
             newProjectList.push(createProject('Failed', alarmName, alarmDate));
           } else if (alarmState === 'INSUFFICIENT_DATA') {
@@ -63,8 +74,6 @@ async function setProjectList(){
     });
   }
 
-
-
   projectList = newProjectList;
   return Promise.resolve('ok');
 }
@@ -73,15 +82,14 @@ async function setProjectList(){
 setInterval(async function() {
   try {
     count++;
-    if((count*INTERVAL) > 3600000) {
+    if ((count*INTERVAL) > 3600000) {
       initialiseCloudWatch();
     }
 
     return setProjectList();
-  } catch(err) {
+  } catch (err) {
     console.log(err);
   }
-
 }, INTERVAL);
 
 /**
@@ -101,8 +109,8 @@ exports.getCCxml = async function(req, res, next) {
     };
     const xml = builder.create(ccFile);
     res.sendRaw(200, xml.end(), {'Content-Type': 'application/xml'});
-  } catch(err) {
-    console.log(err)
+  } catch (err) {
+    console.log(err);
   }
   res.end();
   next();
@@ -153,7 +161,6 @@ function createProject(state, name, lastBuildTime) {
  * @return {Promise<Array>} list of projects
  */
 async function createCCProjectList() {
-
   return projectList;
 }
 
@@ -163,40 +170,39 @@ async function createCCProjectList() {
  * @return {Promise<Array>} list of projects
  */
 async function initialiseCloudWatch() {
-  let newCloudwatchInstances = [];
+  const newCloudwatchInstances = [];
   await config.alarmsAccounts.forEach(async function(entry) {
     const alarmName = entry.alarmName? entry.alarmName : '*';
     if (entry.accountArn) {
       const sts = new AWS.STS();
-      let result = await sts.assumeRole({
+      const result = await sts.assumeRole({
         RoleArn: entry.accountArn,
         DurationSeconds: 900,
-        RoleSessionName: 'testRunner'
+        RoleSessionName: 'testRunner',
       }).promise();
 
       const credentials = {
         accessKeyId: result.Credentials.AccessKeyId,
         secretAccessKey: result.Credentials.SecretAccessKey,
-        sessionToken: result.Credentials.SessionToken
+        sessionToken: result.Credentials.SessionToken,
       };
 
       newCloudwatchInstances.push(
-        {
-          "instance": new AWS.CloudWatch({
-            region: 'eu-west-1', apiVersion: '2015-03-31',
-            credentials: credentials
-          }),
-          "alarmName": alarmName
-        });
-
+          {
+            'instance': new AWS.CloudWatch({
+              region: 'eu-west-1', apiVersion: '2015-03-31',
+              credentials: credentials,
+            }),
+            'alarmName': alarmName,
+          });
     } else {
       newCloudwatchInstances.push(
-        {
-          "instance": new AWS.CloudWatch({
-            region: 'eu-west-1', apiVersion: '2015-03-31'
-          }),
-          "alarmName": alarmName
-        });
+          {
+            'instance': new AWS.CloudWatch({
+              region: 'eu-west-1', apiVersion: '2015-03-31',
+            }),
+            'alarmName': alarmName,
+          });
     }
   });
   cloudwatchInstances = newCloudwatchInstances;
