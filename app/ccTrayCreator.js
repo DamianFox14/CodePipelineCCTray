@@ -79,7 +79,7 @@ async function setProjectList() {
           }
         }
       }
-    };
+    }
   }
 
   projectList = newProjectList;
