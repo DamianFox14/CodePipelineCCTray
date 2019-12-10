@@ -224,7 +224,7 @@ async function initialiseCloudWatch() {
 async function initialisePipelineInstances() {
   const newCodepipelineInstances = [];
   for (let account of config.pipelineAccounts) {
-    const stageName = account.pipelineName? account.pipelineName : '*';
+    const pipelineName = account.pipelineName? account.pipelineName : '*';
     if (account.accountArn) {
       const sts = new AWS.STS();
       const result = await sts.assumeRole({
@@ -245,7 +245,7 @@ async function initialisePipelineInstances() {
             region: 'eu-west-1',
             credentials: credentials,
           }),
-          'pipelineName': stageName,
+          'pipelineName': pipelineName,
         });
     } else {
       newCodepipelineInstances.push(
@@ -253,7 +253,7 @@ async function initialisePipelineInstances() {
           'instance': new AWS.CodePipeline({
             region: 'eu-west-1'
           }),
-          'pipelineName': stageName,
+          'pipelineName': pipelineName,
         });
     }
   }
