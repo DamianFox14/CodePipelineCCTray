@@ -161,9 +161,13 @@ function createProject(state, name, lastBuildTime) {
     '@activity': activity,
     '@lastBuildStatus': currentState,
     '@webUrl': '',
-    '@name': name,
-    '@lastBuildTime': lastBuildTime.toISOString(),
+    '@name': name
   };
+
+  if(lastBuildTime) {
+    project['@lastBuildTime'] = lastBuildTime.toISOString();
+  }
+
   return project;
 }
 
