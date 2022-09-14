@@ -18,7 +18,7 @@
     "sinon": "^7.5.0"
   },
   "dependencies": {
-    "aws-sdk": "^2.586.0",
+    "aws-sdk": "^2.814.0",
     "moment": "^2.24.0",
     "restify": "^8.5.0",
     "xmlbuilder": "^13.0.2"
