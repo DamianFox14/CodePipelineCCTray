@@ -19,7 +19,7 @@
   },
   "dependencies": {
     "aws-sdk": "^2.586.0",
-    "moment": "^2.24.0",
+    "moment": "^2.29.4",
     "restify": "^8.5.0",
     "xmlbuilder": "^13.0.2"
   }
